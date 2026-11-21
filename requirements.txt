@@ -1,0 +1,4 @@
+# Only needed when running from source. Install GPT-SoVITS's own requirements first
+# (https://github.com/RVC-Boss/GPT-SoVITS, commit e91506f), then these:
+faster-whisper>=1.1,<2
+pypinyin

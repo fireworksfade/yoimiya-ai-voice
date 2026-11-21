@@ -1,0 +1,12 @@
+# The release package's large parts, which are not kept in git
+runtime/
+models/
+GPT_SoVITS/
+tools/
+LICENSE-GPT-SoVITS
+
+# Generated while running
+输出/
+logs/
+__pycache__/
+*.pyc

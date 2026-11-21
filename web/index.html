@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>宵宫 · AI 语音</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='7' fill='%23e8a84c'/%3E%3C/svg%3E">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0d0c0b;
+    --surface: #161412;
+    --surface-2: #1d1a17;
+    --line: rgba(240, 233, 223, 0.10);
+    --line-strong: rgba(240, 233, 223, 0.20);
+    --text: #f0e9df;
+    --dim: rgba(240, 233, 223, 0.58);
+    --faint: rgba(240, 233, 223, 0.36);
+    --amber: #e8a84c;
+    --amber-soft: rgba(232, 168, 76, 0.14);
+    --danger: #e98b74;
+    --serif: "Source Han Serif SC", "Noto Serif SC", "Noto Serif CJK SC", "Songti SC", "SimSun", serif;
+    --sans: "Source Han Sans SC", "Noto Sans SC", "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei UI",
+            "Microsoft YaHei", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body {
+    font: 300 16px/1.7 var(--sans);
+    letter-spacing: 0.02em;
+    min-height: 100vh;
+    background:
+      radial-gradient(1200px 600px at 85% -10%, rgba(232, 168, 76, 0.07), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(232, 168, 76, 0.04), transparent 60%),
+      var(--bg);
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 56px 24px 40px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  h1 { font: 300 30px/1.2 var(--serif); letter-spacing: 0.12em; margin: 0; }
+  h1 .sep { color: var(--faint); margin: 0 0.2em; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 999px;
+    border: 1px solid var(--line); color: var(--dim); font-size: 13px; white-space: nowrap;
+  }
+  .pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+  .pill.ready::before { background: var(--amber); box-shadow: 0 0 10px rgba(232, 168, 76, 0.6); }
+  .pill.loading::before { animation: blink 1.2s ease-in-out infinite; background: var(--amber); }
+  .pill.failed { color: var(--danger); border-color: rgba(233, 139, 116, 0.35); }
+  .pill.failed::before { background: var(--danger); }
+  @keyframes blink { 50% { opacity: 0.25; } }
+  .lead { margin: 18px 0 4px; color: var(--dim); font-size: 15px; }
+  .notice { margin: 0 0 28px; color: var(--faint); font-size: 13px; }
+  .tag { color: var(--amber); border: 1px solid rgba(232, 168, 76, 0.45); border-radius: 4px; padding: 0 6px; margin-right: 6px; font-size: 12px; }
+
+  .editor { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); transition: border-color .2s; }
+  .editor:focus-within { border-color: var(--line-strong); }
+  textarea {
+    display: block; width: 100%; min-height: 220px; resize: vertical; border: 0; outline: 0; background: transparent;
+    color: var(--text); font: 400 18px/1.85 var(--sans); letter-spacing: 0.03em; padding: 22px 24px 8px;
+  }
+  textarea::placeholder { color: var(--faint); }
+  .editor-foot { display: flex; justify-content: space-between; padding: 6px 18px 12px 24px; color: var(--faint); font-size: 12px; }
+  .examples { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 26px; }
+  .chip {
+    border: 1px solid var(--line); background: transparent; color: var(--dim); border-radius: 999px; padding: 5px 14px;
+    font: 300 13px/1.5 var(--sans); cursor: pointer; transition: color .2s, border-color .2s;
+  }
+  .chip:hover { color: var(--text); border-color: var(--line-strong); }
+
+  .controls { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+  .speed { display: flex; align-items: center; gap: 12px; color: var(--dim); font-size: 14px; }
+  .speed output { min-width: 2.6em; color: var(--text); font-variant-numeric: tabular-nums; }
+  input[type=range] { -webkit-appearance: none; appearance: none; width: 150px; height: 2px; background: var(--line-strong); border-radius: 2px; outline: none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--text); cursor: pointer; }
+  input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border: 0; border-radius: 50%; background: var(--text); cursor: pointer; }
+  .toggle { display: flex; align-items: center; gap: 8px; color: var(--dim); font-size: 14px; cursor: pointer; user-select: none; }
+  .toggle input { accent-color: var(--amber); width: 15px; height: 15px; }
+  .toggle.off { opacity: 0.45; cursor: default; }
+  .spacer { flex: 1; }
+  button.primary {
+    border: 1px solid var(--amber); background: var(--amber); color: #1a1209; border-radius: 999px; padding: 9px 34px;
+    font: 500 15px/1.4 var(--sans); letter-spacing: 0.3em; text-indent: 0.3em; cursor: pointer; transition: filter .2s, background .2s, color .2s;
+  }
+  button.primary:hover { filter: brightness(1.08); }
+  button.primary:disabled { background: transparent; color: var(--faint); border-color: var(--line); cursor: default; filter: none; }
+  button.primary.stop { background: transparent; color: var(--amber); }
+
+  .progress { margin: 26px 0 0; }
+  .bar { height: 2px; background: var(--line); border-radius: 2px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--amber); transition: width .4s ease; }
+  .progress-text { display: flex; justify-content: space-between; margin-top: 10px; color: var(--dim); font-size: 13px; font-variant-numeric: tabular-nums; }
+
+  .result { margin-top: 30px; padding: 22px 24px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+  audio { width: 100%; height: 40px; }
+  .result-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+  .file { color: var(--dim); font-size: 13px; word-break: break-all; }
+  .file b { color: var(--text); font-weight: 400; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .ghost {
+    border: 1px solid var(--line); background: transparent; color: var(--dim); border-radius: 999px; padding: 5px 14px;
+    font: 300 13px/1.5 var(--sans); cursor: pointer; text-decoration: none; transition: color .2s, border-color .2s;
+  }
+  .ghost:hover { color: var(--text); border-color: var(--line-strong); }
+  .warnings { margin: 14px 0 0; padding: 0; list-style: none; color: var(--amber); font-size: 13px; }
+  .warnings li { margin-top: 4px; }
+  .warnings:empty { display: none; }
+  .error { margin-top: 22px; color: var(--danger); font-size: 14px; }
+
+  .history { margin-top: 44px; }
+  .history h2 { font: 400 13px/1 var(--sans); letter-spacing: 0.3em; color: var(--faint); margin: 0 0 10px; }
+  .history ul { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+  .history li { display: flex; align-items: center; gap: 12px; padding: 10px 2px; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .history .name { flex: 1; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .history .len { color: var(--faint); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .play { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--line-strong); background: transparent; cursor: pointer; position: relative; flex: none; }
+  .play::after { content: ""; position: absolute; left: 11px; top: 8px; border-style: solid; border-width: 6px 0 6px 9px; border-color: transparent transparent transparent var(--text); }
+  .play:hover { border-color: var(--amber); }
+  .empty { color: var(--faint); font-size: 13px; padding: 12px 2px; }
+
+  footer { margin-top: 56px; color: var(--faint); font-size: 12px; line-height: 1.9; }
+  [hidden] { display: none !important; }
+  @media (max-width: 560px) {
+    main { padding: 32px 16px; }
+    h1 { font-size: 24px; }
+    .controls { gap: 16px; }
+    .spacer { display: none; }
+    button.primary { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>宵宫<span class="sep">·</span>AI 语音</h1>
+    <span id="status" class="pill loading">正在加载模型…</span>
+  </header>
+  <p class="lead">输入文字，用宵宫的声音读出来。</p>
+  <p class="notice"><span class="tag">AI 合成</span>声音由人工智能生成，不是角色原声，也不是配音演员本人。</p>
+
+  <section class="editor">
+    <textarea id="text" maxlength="20000" placeholder="在这里输入想让她读的文字。可以分段，段与段之间会停得稍长一些。"></textarea>
+    <div class="editor-foot"><span id="count">0 字</span><span>Ctrl + Enter 生成</span></div>
+  </section>
+  <div class="examples" id="examples">
+    <button class="chip" type="button">今天辛苦啦！晚饭要好好吃，早点休息哦。</button>
+    <button class="chip" type="button">夏日祭的夜空，就交给长野原烟花店吧！</button>
+    <button class="chip" type="button">烟花虽然只有短短一瞬，可是看过它的人，会把这份快乐记得很久很久。</button>
+  </div>
+
+  <div class="controls">
+    <label class="speed">语速
+      <input type="range" id="speed" min="0.8" max="1.2" step="0.05" value="0.95">
+      <output id="speedValue">0.95</output>
+    </label>
+    <label class="toggle" id="checkLabel" title="每段读完后用语音识别核对一遍，发现漏字或多字就换一种读法重读">
+      <input type="checkbox" id="check" checked> 自动核对漏字
+    </label>
+    <span class="spacer"></span>
+    <button id="go" class="primary" type="button" disabled>生成</button>
+  </div>
+
+  <div id="progress" class="progress" hidden>
+    <div class="bar"><i id="bar"></i></div>
+    <div class="progress-text"><span id="progressText">正在合成</span><span id="elapsed"></span></div>
+  </div>
+  <div id="error" class="error" hidden></div>
+
+  <section id="result" class="result" hidden>
+    <audio id="player" controls preload="auto"></audio>
+    <div class="result-row">
+      <span class="file">已保存到 输出 \ <b id="fileName"></b></span>
+      <span class="actions">
+        <button class="ghost" id="again" type="button" title="同一段文字换一种读法再生成一次">换一种读法</button>
+        <a class="ghost" id="download" href="#">下载</a>
+        <button class="ghost" id="openFolder" type="button">打开输出文件夹</button>
+      </span>
+    </div>
+    <ul id="warnings" class="warnings"></ul>
+  </section>
+
+  <section class="history">
+    <h2>最近生成</h2>
+    <ul id="history"><li class="empty">还没有生成过音频</li></ul>
+  </section>
+
+  <footer>
+    仅供个人学习与欣赏。请勿用于冒充他人、诈骗或任何商业用途；公开发布生成的音频时，请标注「AI 生成」。<br>
+    基于 GPT-SoVITS。角色形象与原始语音的权利属于其权利人。
+  </footer>
+</main>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const text = $("text"), go = $("go"), speed = $("speed"), check = $("check");
+  // current: the text and reading being generated; shown: those of the result on screen ("换一种读法" builds on it)
+  let ready = false, running = false, jobId = null, polling = null, current = null, shown = null;
+
+  const store = {
+    get(key, fallback) { try { const v = localStorage.getItem("yoimiya." + key); return v === null ? fallback : v; } catch (e) { return fallback; } },
+    set(key, value) { try { localStorage.setItem("yoimiya." + key, value); } catch (e) {} },
+  };
+  text.value = store.get("text", "");
+  speed.value = store.get("speed", speed.value);
+  check.checked = store.get("check", "1") === "1";
+
+  const countChars = () => { $("count").textContent = text.value.replace(/\s/g, "").length + " 字"; };
+  const showSpeed = () => { $("speedValue").textContent = Number(speed.value).toFixed(2); };
+  countChars(); showSpeed();
+  text.addEventListener("input", () => { countChars(); store.set("text", text.value); refreshButton(); });
+  speed.addEventListener("input", () => { showSpeed(); store.set("speed", speed.value); });
+  check.addEventListener("change", () => store.set("check", check.checked ? "1" : "0"));
+  $("examples").addEventListener("click", (event) => {
+    if (event.target.classList.contains("chip")) {
+      text.value = event.target.textContent; countChars(); store.set("text", text.value); refreshButton(); text.focus();
+    }
+  });
+
+  function refreshButton() {
+    if (running) { go.textContent = "停止"; go.classList.add("stop"); go.disabled = false; return; }
+    go.classList.remove("stop");
+    go.textContent = ready ? "生成" : "加载中";
+    go.disabled = !ready || !text.value.trim();
+  }
+
+  async function api(path, body) {
+    const options = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+    const response = await fetch(path, options);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || ("出错了（" + response.status + "）"));
+    return data;
+  }
+
+  function showError(message) { $("error").textContent = message; $("error").hidden = !message; }
+
+  function setStatus(status) {
+    const pill = $("status");
+    pill.className = "pill " + status.state;
+    if (status.state === "loading") pill.textContent = "正在加载模型…";
+    else if (status.state === "failed") pill.textContent = "加载失败";
+    else pill.textContent = "就绪 · " + status.device.split("：")[0].replace(/^显卡 (NVIDIA )?(GeForce )?/, "显卡 ");
+    pill.title = status.device + (status.check_note ? "\n" + status.check_note : "");
+    if (status.state === "failed") showError("模型加载失败：" + status.error + "。详细信息在 logs\\app.log。");
+    if (status.state === "ready" && !status.check) {
+      check.checked = false; check.disabled = true; $("checkLabel").classList.add("off");
+      $("checkLabel").title = status.check_note || "自动核对不可用";
+    }
+    ready = status.state === "ready";
+    refreshButton();
+  }
+
+  function fmtSeconds(s) {
+    s = Math.round(s);
+    return s < 60 ? s + " 秒" : Math.floor(s / 60) + " 分 " + (s % 60) + " 秒";
+  }
+
+  async function poll() {
+    let status;
+    try { status = await api("/api/status"); } catch (e) { return; }
+    setStatus(status);
+    const job = status.job;
+    if (running && job && job.id === jobId) {
+      const share = job.total ? job.done / job.total : 0;
+      $("bar").style.width = Math.max(share * 100, 3) + "%";
+      $("progressText").textContent = job.total ? "正在合成 · " + job.done + " / " + job.total + " 段" : "正在合成";
+      $("elapsed").textContent = "已用 " + fmtSeconds(job.running_for);
+      if (job.state !== "running") finish(job);
+    }
+    if (!running && ready) { clearInterval(polling); polling = null; }
+  }
+
+  function startPolling(interval) { clearInterval(polling); polling = setInterval(poll, interval); poll(); }
+
+  function finish(job) {
+    running = false; jobId = null;
+    $("progress").hidden = true;
+    refreshButton();
+    if (job.state === "error") { showError("合成出错：" + job.error); return; }
+    if (job.state === "cancelled") { showError("已停止。"); return; }
+    const url = "/audio/" + encodeURIComponent(job.file);
+    const player = $("player");
+    player.src = url + "?t=" + Date.now();
+    player.play().catch(() => {});
+    $("fileName").textContent = job.file;
+    $("download").href = url + "?download=1";
+    shown = current;
+    $("again").hidden = false;
+    const warnings = $("warnings");
+    warnings.innerHTML = "";
+    (job.unmatched || []).forEach((sentence) => {
+      const li = document.createElement("li");
+      li.textContent = "这一句自动核对后可能仍有出入，建议听一下：" + sentence;
+      warnings.appendChild(li);
+    });
+    $("result").hidden = false;
+    loadHistory();
+  }
+
+  async function speak(another) {
+    if (running) { api("/api/cancel", {}).catch(() => {}); return; }
+    if (another && shown) { text.value = shown.text; countChars(); store.set("text", text.value); }
+    const value = text.value;
+    if (!value.trim() || !ready) return;
+    const same = shown && shown.text === value;
+    const reading = another && shown ? shown.reading + 1 : (same ? shown.reading : 1);
+    current = { text: value, reading };
+    showError("");
+    try {
+      const job = await api("/api/speak", { text: value, speed: Number(speed.value), check: check.checked, reading });
+      jobId = job.id; running = true;
+      $("bar").style.width = "3%";
+      $("progressText").textContent = "正在合成"; $("elapsed").textContent = "";
+      $("progress").hidden = false;
+      refreshButton();
+      startPolling(500);
+    } catch (e) { showError(e.message); }
+  }
+
+  go.addEventListener("click", () => speak(false));
+  $("again").addEventListener("click", () => speak(true));
+  text.addEventListener("keydown", (event) => { if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); if (!running) speak(false); } });
+  $("openFolder").addEventListener("click", () => api("/api/open-folder", {}).catch((e) => showError(e.message)));
+
+  async function loadHistory() {
+    let data;
+    try { data = await api("/api/history"); } catch (e) { return; }
+    const list = $("history");
+    list.innerHTML = "";
+    if (!data.files.length) { list.innerHTML = '<li class="empty">还没有生成过音频</li>'; return; }
+    data.files.forEach((file) => {
+      const li = document.createElement("li");
+      const play = document.createElement("button");
+      play.className = "play"; play.type = "button"; play.title = "播放";
+      play.addEventListener("click", () => {
+        const url = "/audio/" + encodeURIComponent(file.name);
+        $("player").src = url; $("player").play().catch(() => {});
+        $("fileName").textContent = file.name; $("download").href = url + "?download=1";
+        $("warnings").innerHTML = ""; $("result").hidden = false;
+        shown = null; $("again").hidden = true;  // Only the file name is known, not the whole text
+      });
+      const name = document.createElement("span"); name.className = "name"; name.textContent = file.name; name.title = file.name;
+      const len = document.createElement("span"); len.className = "len"; len.textContent = file.seconds.toFixed(1) + " 秒";
+      const link = document.createElement("a"); link.className = "ghost"; link.textContent = "下载"; link.href = "/audio/" + encodeURIComponent(file.name) + "?download=1";
+      li.append(play, name, len, link);
+      list.appendChild(li);
+    });
+  }
+
+  startPolling(1000);
+  loadHistory();
+})();
+</script>
+</body>
+</html>

@@ -11,7 +11,7 @@
 
 ## 下载和使用（Windows）
 
-1. 打开 [Releases 页面](https://github.com/fireworksfade/yoimiya-ai-voice/releases/latest)，下载最新版本的**全部分卷**（`Yoimiya-AI-Voice-…-win64.7z.001`、`.002`、`.003`，共约 4.2 GB），放在同一个文件夹里。
+1. 打开 [Releases 页面](https://github.com/fireworksfade/yoimiya-ai-voice/releases/latest)，下载最新版本的**全部分卷**（v1.0 共 11 个：`Yoimiya-AI-Voice-v1.0-win64.7z.001` 到 `.011`，每个约 400 MB，共约 4.2 GB），放在同一个文件夹里。
 2. 用 [7-Zip](https://www.7-zip.org/) 或 Bandizip 解压 `.7z.001`，其他分卷会自动接上。解压到路径短一点的地方，比如 `D:\`。
 3. 打开解压出来的「宵宫AI语音」文件夹，双击 **`启动.bat`**。
 4. 浏览器会自动打开页面。等右上角显示「就绪」（第一次大约半分钟），输入文字，点 **生成**。
